@@ -19,10 +19,3 @@ newtype Flags = Flags { unFlags :: Int } deriving (Eq, Show)
 
 unionFlags :: [Flags] -> CInt
 unionFlags = fromIntegral . foldl' ((. unFlags) . (.|.)) 0
-
-#{def unsigned int
-    __posixdir_d_type(struct dirent* d)
-    {
-      return(d -> d_type);
-    }
-}
