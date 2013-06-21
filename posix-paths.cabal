@@ -11,7 +11,7 @@ description:
   services.  
 	.
 	The package is not supported under Windows (except under Cygwin).
-extra-source-files:
+extra-source-files: cbits/dirutils.h
 extra-tmp-files:
 build-type: Simple
 Cabal-Version: >= 1.16
