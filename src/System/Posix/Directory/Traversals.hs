@@ -18,6 +18,8 @@ module System.Posix.Directory.Traversals (
 , readDirEnt
 , packDirStream
 , unpackDirStream
+
+, realpath
 ) where
 
 import Control.Applicative
@@ -39,7 +41,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Foreign.C.Error
 import Foreign.C.String
 import Foreign.C.Types
-import Foreign.Marshal.Alloc (alloca)
+import Foreign.Marshal.Alloc (alloca,allocaBytes)
 import Foreign.Ptr
 import Foreign.Storable
 
@@ -150,6 +152,9 @@ foreign import ccall unsafe "fdopendir"
 foreign import ccall unsafe "openat"
   c_openat :: Posix.Fd -> CString -> CInt -> IO Posix.Fd
 
+foreign import ccall "realpath"
+  c_realpath :: CString -> CString -> IO CString
+
 fdOpendir :: Posix.Fd -> IO DirStream
 fdOpendir fd =
     packDirStream <$> throwErrnoIfNull "fdOpendir" (c_fdopendir fd)
@@ -204,3 +209,12 @@ getDirectoryContents path =
      if BS.null e then return [] else do
        es <- loop dirp
        return (t:es)
+
+-- | return the canonicalized absolute pathname
+--
+-- like canonicalizePath, but uses realpath(3)
+realpath :: RawFilePath -> IO RawFilePath
+realpath inp = do
+    allocaBytes pathMax $ \tmp -> do
+        void $ BS.useAsCString inp $ \cstr -> throwErrnoIfNull "realpath" $ c_realpath cstr tmp
+        BS.packCString tmp
