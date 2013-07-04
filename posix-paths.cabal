@@ -14,7 +14,7 @@ description:
 extra-source-files: cbits/dirutils.h
 extra-tmp-files:
 build-type: Simple
-Cabal-Version: >= 1.16
+Cabal-Version: >= 1.14
 
 Library
     hs-source-dirs:     src
@@ -25,4 +25,8 @@ Library
                         System.Posix.FilePath
     build-depends:      base >= 4.2 && < 4.7,
                         bytestring >= 0.9.2.0 && < 0.11,
-                        unix
+                        unix >= 2.5 && < 2.7
+
+source-repository head
+  type:                git
+  location:            git://github.com/JohnLato/posix-paths.git
