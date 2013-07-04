@@ -15,14 +15,14 @@ module System.Posix.FilePath (
 
 , splitExtension
 , takeExtension
--- , replaceExtension
+, replaceExtension
 , dropExtension
 , addExtension
--- , hasExtension
+, hasExtension
 , (<.>)
--- , splitExtensions
--- , dropExtensions
--- , takeExtensions
+, splitExtensions
+, dropExtensions
+, takeExtensions
 
 , splitFileName
 , takeFileName
@@ -51,8 +51,10 @@ module System.Posix.FilePath (
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           System.Posix.ByteString.FilePath
-import           Data.Word (Word8)
+
 import           Data.Char (ord)
+import           Data.Maybe (isJust)
+import           Data.Word (Word8)
 
 import           Control.Arrow (second)
 
@@ -77,7 +79,7 @@ isExtSeparator = (== extSeparator)
 ------------------------
 -- extension stuff
 
-splitExtension :: RawFilePath -> (ByteString, ByteString)
+splitExtension :: RawFilePath -> (RawFilePath, ByteString)
 splitExtension x = if BS.null basename
     then (x,"")
     else (BS.concat [path,BS.init basename],BS.cons extSeparator fileExt)
@@ -87,6 +89,9 @@ splitExtension x = if BS.null basename
 
 takeExtension :: RawFilePath -> ByteString
 takeExtension = snd . splitExtension
+
+replaceExtension :: RawFilePath -> ByteString -> RawFilePath
+replaceExtension path ext = dropExtension path <.> ext
 
 dropExtension :: RawFilePath -> RawFilePath
 dropExtension = fst . splitExtension
@@ -100,6 +105,23 @@ addExtension file ext
 
 (<.>) :: RawFilePath -> ByteString -> RawFilePath
 (<.>) = addExtension
+
+hasExtension :: RawFilePath -> Bool
+hasExtension = isJust . BS.elemIndex pathSeparator . takeFileName
+
+splitExtensions :: RawFilePath -> (RawFilePath, ByteString)
+splitExtensions x = if BS.null basename
+    then (x,"")
+    else (BS.concat [path,basename],fileExt)
+  where
+    (path,file) = splitFileNameRaw x
+    (basename,fileExt) = BS.break isExtSeparator file
+
+dropExtensions :: RawFilePath -> RawFilePath
+dropExtensions = fst . splitExtensions
+
+takeExtensions :: RawFilePath -> ByteString
+takeExtensions = snd . splitExtensions
 
 ------------------------
 -- more stuff
