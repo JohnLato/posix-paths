@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE TupleSections #-}
@@ -79,9 +78,9 @@ isExtSeparator = (== extSeparator)
 -- extension stuff
 
 splitExtension :: RawFilePath -> (ByteString, ByteString)
-splitExtension x = if
-    | BS.null basename -> (x,"")
-    | otherwise -> (BS.concat [path,BS.init basename],BS.cons extSeparator fileExt)
+splitExtension x = if BS.null basename
+    then (x,"")
+    else (BS.concat [path,BS.init basename],BS.cons extSeparator fileExt)
   where
     (path,file) = splitFileNameRaw x
     (basename,fileExt) = BS.breakEnd isExtSeparator file
@@ -106,9 +105,9 @@ addExtension file ext
 -- more stuff
 
 splitFileName :: RawFilePath -> (RawFilePath, RawFilePath)
-splitFileName x = if
-    | BS.null path -> ("./", file)
-    | otherwise    -> (path,file)
+splitFileName x = if BS.null path
+    then ("./", file)
+    else (path,file)
   where
     (path,file) = splitFileNameRaw x
 
@@ -131,10 +130,10 @@ replaceBaseName path name = combineRaw dir (name <.> ext)
     ext = takeExtension file
 
 takeDirectory :: RawFilePath -> RawFilePath
-takeDirectory x = if
-    | x == "/" -> x
-    | BS.null res && not (BS.null file) -> file
-    | otherwise -> res
+takeDirectory x = case () of
+    () | x == "/" -> x
+       | BS.null res && not (BS.null file) -> file
+       | otherwise -> res
   where
     res = fst $ BS.spanEnd isPathSeparator file
     file = dropFileName x
