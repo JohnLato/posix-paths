@@ -132,7 +132,7 @@ unpackDirStream = unsafeCoerce
 packDirStream :: Ptr CDir -> DirStream
 packDirStream = unsafeCoerce
 
--- the __hscore_* functions are defined in the posix package.  We can import them and let
+-- the __hscore_* functions are defined in the unix package.  We can import them and let
 -- the linker figure it out.
 foreign import ccall unsafe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt
