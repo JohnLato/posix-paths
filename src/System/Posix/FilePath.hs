@@ -5,6 +5,9 @@
 
 {-# OPTIONS_GHC -Wall #-}
 
+-- | The equivalent of "System.FilePath" on raw (byte string) file paths.
+--
+-- Not all functions of "System.FilePath" are implemented yet. Feel free to contribute!
 module System.Posix.FilePath (
 
   pathSeparator
@@ -70,11 +73,11 @@ import           Control.Arrow (second)
 -- >>> let _chr :: Word8 -> Char; _chr = chr . fromIntegral
 
 
--- | Path separator charactor
+-- | Path separator character
 pathSeparator :: Word8
 pathSeparator = fromIntegral $ ord '/'
 
--- | Check if a charactor is the path separator
+-- | Check if a character is the path separator
 --
 -- prop> \n ->  (_chr n == '/') == isPathSeparator n
 isPathSeparator :: Word8 -> Bool
@@ -84,7 +87,7 @@ isPathSeparator = (== pathSeparator)
 searchPathSeparator :: Word8
 searchPathSeparator = fromIntegral $ ord ':'
 
--- | Check if a charactor is the search path separator
+-- | Check if a character is the search path separator
 --
 -- prop> \n -> (_chr n == ':') == isSearchPathSeparator n
 isSearchPathSeparator :: Word8 -> Bool
@@ -94,7 +97,7 @@ isSearchPathSeparator = (== searchPathSeparator)
 extSeparator :: Word8
 extSeparator = fromIntegral $ ord '.'
 
--- | Check if a charactor is the file extension separator
+-- | Check if a character is the file extension separator
 --
 -- prop> \n -> (_chr n == '.') == isExtSeparator n
 isExtSeparator :: Word8 -> Bool
@@ -177,6 +180,7 @@ addExtension file ext
 (<.>) = addExtension
 
 -- | Check if a 'RawFilePath' has an extension
+--
 -- >>> hasExtension "file"
 -- False
 --
@@ -219,7 +223,7 @@ takeExtensions = snd . splitExtensions
 ------------------------
 -- more stuff
 
--- Split a 'RawFilePath' into (path,file).  'combine' is the inverse
+-- | Split a 'RawFilePath' into (path,file).  'combine' is the inverse
 --
 -- >>> splitFileName "path/file.txt"
 -- ("path/","file.txt")

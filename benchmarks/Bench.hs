@@ -24,6 +24,8 @@ import System.Process (system)
 import Criterion.Main
 
 
+-- | Based on code from 'Real World Haskell', at
+-- http://book.realworldhaskell.org/read/io-case-study-a-library-for-searching-the-filesystem.html#id620419
 listFilesRecursive :: FilePath -> IO [FilePath]
 listFilesRecursive topdir = do
     names <- System.Directory.getDirectoryContents topdir
@@ -54,6 +56,7 @@ getDirectoryContentsBS path =
        return (e:es)
 
 
+-- | similar to 'listFilesRecursive, but uses RawFilePaths
 listFilesRecursiveBS :: RawFilePath -> IO [RawFilePath]
 listFilesRecursiveBS topdir = do
     names <- getDirectoryContentsBS topdir
