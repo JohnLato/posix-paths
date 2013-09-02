@@ -23,6 +23,12 @@ import System.IO.Unsafe
 import System.Process (system)
 import Criterion.Main
 
+import qualified Data.DirStream as P
+import Pipes as P
+import Data.String
+import qualified Pipes.Safe as P
+import qualified Pipes.Prelude as P
+
 
 -- | Based on code from 'Real World Haskell', at
 -- http://book.realworldhaskell.org/read/io-case-study-a-library-for-searching-the-filesystem.html#id620419
@@ -74,6 +80,12 @@ listFilesRecursiveBS topdir = do
 benchTraverse :: RawFilePath -> IO ()
 benchTraverse = traverseDirectory (\() p -> BS.putStrLn p) ()
 
+----------------------------------------------------------
+-- from
+-- https://github.com/Gabriel439/Haskell-DirStream-Library/blob/master/src/Data/DirStream.hs
+pipesTest d = P.runSafeT $ P.runEffect $
+    every (P.descendentOf d) >-> P.show >-> hoist lift P.stdoutLn
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -87,4 +99,5 @@ main = do
     , bench "allDirectoryContents'"    $ nfIO $ allDirectoryContents' (BS.pack d) >>= mapM_ BS.putStrLn
     , bench "traverseDirectory"        $ nfIO $ benchTraverse (BS.pack d)
     , bench "unix find"                $ nfIO $ void $ system ("find " ++ d)
+    , bench "pipes.direstream"         $ nfIO $ pipesTest (fromString d)
     ]
