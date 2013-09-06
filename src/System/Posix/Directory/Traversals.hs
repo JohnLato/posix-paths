@@ -95,8 +95,8 @@ traverseDirectory act s0 topdir = bracket someOpenFunc Posix.closeFd toploop
                | typ == dtUnknown -> isDirectory <$> getFileStatus fullpath
                | otherwise        -> return False
         if isDir
-          then act acc path >>= \acc' -> actOnDirContents fd path acc' (loop fullpath)
-          else act acc path
+          then act acc fullpath >>= \acc' -> actOnDirContents fd path acc' (loop fullpath)
+          else act acc fullpath
 
 
 actOnDirContents :: Posix.Fd -> RawFilePath -> b -> (DirType -> Posix.Fd -> RawFilePath -> b -> IO b) -> IO b
