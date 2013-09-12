@@ -70,13 +70,17 @@ allDirectoryContents topdir = do
 
 -- | Get all files from a directory and its subdirectories strictly.
 --
+--
+
 allDirectoryContents' :: RawFilePath -> IO [RawFilePath]
 allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:acc)) []
 -- this uses traverseDirectory because it's more efficient than forcing the
 -- lazy version.
 
--- recursively apply the 'action' to the parent directory and all
+-- | Recursively apply the 'action' to the parent directory and all
 -- files/subdirectories.
+--
+-- This function allows for memory-efficient traversals.
 traverseDirectory :: (s -> RawFilePath -> IO s) -> s -> RawFilePath -> IO s
 traverseDirectory act s0 topdir = bracket someOpenFunc Posix.closeFd toploop
   where
