@@ -13,8 +13,6 @@ module System.Posix.Directory.Traversals (
 , traverseDirectory
 
 -- lower-level stuff
-, openAt
-, fdOpendir
 , readDirEnt
 , packDirStream
 , unpackDirStream
@@ -28,7 +26,6 @@ import System.Posix.FilePath ((</>))
 import System.Posix.Directory.Foreign
 
 import qualified System.Posix as Posix
-import qualified System.Posix.IO.ByteString as PosixBS
 import System.IO.Error
 import Control.Exception
 import qualified Data.ByteString.Char8 as BS
@@ -69,9 +66,6 @@ allDirectoryContents topdir = do
     return (topdir : concat paths)
 
 -- | Get all files from a directory and its subdirectories strictly.
---
---
-
 allDirectoryContents' :: RawFilePath -> IO [RawFilePath]
 allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:acc)) []
 -- this uses traverseDirectory because it's more efficient than forcing the
@@ -82,44 +76,43 @@ allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:
 --
 -- This function allows for memory-efficient traversals.
 traverseDirectory :: (s -> RawFilePath -> IO s) -> s -> RawFilePath -> IO s
-traverseDirectory act s0 topdir = bracket someOpenFunc Posix.closeFd toploop
+traverseDirectory act s0 topdir = toploop
   where
-    someOpenFunc = PosixBS.openFd topdir Posix.ReadOnly Nothing
-                      (Posix.defaultFileFlags {Posix.nonBlock = True, Posix.noctty = True})
-    toploop fd = do
+    toploop = do
         isDir <- isDirectory <$> getFileStatus topdir
         s' <- act s0 topdir
-        if isDir then actOnDirContents fd "." s' (loop topdir)
+        if isDir then actOnDirContents topdir s' loop
                  else return s'
-
-    loop relpath typ fd path acc = do
-        let fullpath = relpath </> path
+    loop typ path acc = do
         isDir <- case () of
             () | typ == dtDir     -> return True
-               | typ == dtUnknown -> isDirectory <$> getFileStatus fullpath
+               | typ == dtUnknown -> isDirectory <$> getFileStatus path
                | otherwise        -> return False
         if isDir
-          then act acc fullpath >>= \acc' -> actOnDirContents fd path acc' (loop fullpath)
-          else act acc fullpath
+          then act acc path >>= \acc' -> actOnDirContents path acc' loop
+          else act acc path
 
-
-actOnDirContents :: Posix.Fd -> RawFilePath -> b -> (DirType -> Posix.Fd -> RawFilePath -> b -> IO b) -> IO b
-actOnDirContents dirFd relpath b f =
-  modifyIOError ((`ioeSetFileName` (BS.unpack relpath)) .
+actOnDirContents :: RawFilePath
+                 -> b
+                 -> (DirType -> RawFilePath -> b -> IO b)
+                 -> IO b
+actOnDirContents pathRelToTop b f =
+  modifyIOError ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
                  (`ioeSetLocation` "findBSTypRel")) $ do
     bracket
-      (openAt dirFd relpath)
-      (Posix.closeFd)
-      (\p -> fdOpendir p >>= \dirp -> loop p dirp b)
+      (openDirStream pathRelToTop)
+      (Posix.closeDirStream)
+      (\dirp -> loop dirp b)
  where
-  loop fd dirp b' = do
+  loop dirp b' = do
     (typ,e) <- readDirEnt dirp
     if (e == "")
       then return b'
       else do
-          if (e == "." || e == "..") 
-              then loop fd dirp b'
-              else f typ fd e b' >>= loop fd dirp
+          if (e == "." || e == "..")
+              then loop dirp b'
+              else f typ (pathRelToTop </> e) b' >>= loop dirp
+
 
 ----------------------------------------------------------
 -- dodgy stuff
@@ -150,24 +143,8 @@ foreign import ccall unsafe "__hscore_d_name"
 foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 
-foreign import ccall unsafe "fdopendir"
-  c_fdopendir :: Posix.Fd -> IO (Ptr ())
-
-foreign import ccall unsafe "openat"
-  c_openat :: Posix.Fd -> CString -> CInt -> IO Posix.Fd
-
 foreign import ccall "realpath"
   c_realpath :: CString -> CString -> IO CString
-
-fdOpendir :: Posix.Fd -> IO DirStream
-fdOpendir fd =
-    packDirStream <$> throwErrnoIfNull "fdOpendir" (c_fdopendir fd)
-
-openAt :: Posix.Fd -> RawFilePath -> IO Posix.Fd
-openAt relfd path =
-    BS.useAsCString path $ throwErrnoIfMinus1Retry "openAt" . flip (c_openat relfd) defFlags
-  where
-    defFlags = unionFlags [oRdonly, oNonblock, oDirectory, oCloexec]
 
 ----------------------------------------------------------
 -- less dodgy but still lower-level
