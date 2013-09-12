@@ -3,7 +3,7 @@ version:        0.1.1.0
 license:	BSD3
 license-file:	LICENSE
 maintainer:	jwlato@gmail.com
-bug-reports: http://hackage.haskell.org/trac/ghc/newticket?component=libraries/unix
+bug-reports: http://github.com/JohnLato/posix-paths/issues
 synopsis:	POSIX filepath/directory functionality
 category:       System
 description:
