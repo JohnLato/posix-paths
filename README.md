@@ -1,4 +1,3 @@
-[![Build Status](https://secure.travis-ci.org/JohnLato/posix-paths.png?branch=master)](http://travis-ci.org/JohnLato/posix-paths)
 posix-paths
 ===========
 
