@@ -39,7 +39,8 @@ test-suite doctests
                         unix,
                         posix-paths,
                         doctest >= 0.8,
-                        HUnit
+                        HUnit,
+                        QuickCheck
 
 benchmark bench.hs
   default-language: Haskell2010
