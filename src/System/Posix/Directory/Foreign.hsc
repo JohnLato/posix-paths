@@ -16,7 +16,11 @@ newtype Flags = Flags { unFlags :: Int } deriving (Eq, Show)
 
 #{enum DirType, DirType, DT_BLK, DT_CHR, DT_DIR, DT_FIFO, DT_LNK, DT_REG, DT_SOCK, DT_UNKNOWN}
 
-#{enum Flags, Flags, O_APPEND, O_ASYNC, O_CLOEXEC, O_CREAT, O_DIRECTORY, O_EXCL, O_NOCTTY, O_NOFOLLOW, O_NONBLOCK, O_RDONLY, O_SYNC, O_TRUNC}
+#{enum Flags, Flags, O_APPEND, O_ASYNC, O_CREAT, O_DIRECTORY, O_EXCL, O_NOCTTY, O_NOFOLLOW, O_NONBLOCK, O_RDONLY, O_SYNC, O_TRUNC}
+
+#ifdef O_CLOEXEC
+#{enum Flags, Flags, O_CLOEXEC}
+#endif
 
 pathMax :: Int
 pathMax = #{const PATH_MAX}
