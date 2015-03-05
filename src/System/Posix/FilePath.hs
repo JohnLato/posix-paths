@@ -121,7 +121,7 @@ isExtSeparator = (== extSeparator)
 splitExtension :: RawFilePath -> (RawFilePath, ByteString)
 splitExtension x = if BS.null basename
     then (x,"")
-    else (BS.concat [path,BS.init basename],BS.cons extSeparator fileExt)
+    else (BS.append path (BS.init basename),BS.cons extSeparator fileExt)
   where
     (path,file) = splitFileNameRaw x
     (basename,fileExt) = BS.breakEnd isExtSeparator file
@@ -171,8 +171,8 @@ dropExtension = fst . splitExtension
 addExtension :: RawFilePath -> ByteString -> RawFilePath
 addExtension file ext
     | BS.null ext = file
-    | isExtSeparator (BS.head ext) = BS.concat [file, ext]
-    | otherwise = BS.concat [file, BS.singleton extSeparator, ext]
+    | isExtSeparator (BS.head ext) = BS.append file ext
+    | otherwise = BS.intercalate (BS.singleton extSeparator) [file, ext]
 
 
 -- | Operator version of 'addExtension'
@@ -201,7 +201,7 @@ hasExtension = isJust . BS.elemIndex extSeparator . takeFileName
 splitExtensions :: RawFilePath -> (RawFilePath, ByteString)
 splitExtensions x = if BS.null basename
     then (x,"")
-    else (BS.concat [path,basename],fileExt)
+    else (BS.append path basename,fileExt)
   where
     (path,file) = splitFileNameRaw x
     (basename,fileExt) = BS.break isExtSeparator file
@@ -450,8 +450,8 @@ splitFileNameRaw x = BS.breakEnd isPathSeparator x
 combineRaw :: RawFilePath -> RawFilePath -> RawFilePath
 combineRaw a b | BS.null a = b
                   | BS.null b = a
-                  | isPathSeparator (BS.last a) = BS.concat [a, b]
-                  | otherwise = BS.concat [a,BS.singleton pathSeparator, b]
+                  | isPathSeparator (BS.last a) = BS.append a b
+                  | otherwise = BS.intercalate (BS.singleton pathSeparator) [a, b]
 
 -- | we don't even attempt to fully normalize file paths, this is just enough
 -- equality to test some operations.
