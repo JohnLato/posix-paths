@@ -8,7 +8,7 @@ synopsis:	POSIX filepath/directory functionality
 category:       System
 description:
 	This package gives access to certain POSIX-based Filepath/Directory
-  services.  
+  services.
 	.
 	The package is not supported under Windows (except under Cygwin).
 extra-source-files: cbits/dirutils.h
