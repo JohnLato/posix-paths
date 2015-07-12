@@ -200,7 +200,7 @@ hasExtension = isJust . BS.elemIndex extSeparator . takeFileName
 -- prop> \path -> uncurry addExtension (splitExtensions path) == path
 splitExtensions :: RawFilePath -> (RawFilePath, ByteString)
 splitExtensions x = if BS.null basename
-    then (x,BS.empty)
+    then (path,fileExt)
     else (BS.append path basename,fileExt)
   where
     (path,file) = splitFileNameRaw x
