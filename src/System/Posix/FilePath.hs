@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wall #-}
@@ -54,9 +53,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           System.Posix.ByteString.FilePath
 
-import           Data.Char  (ord)
 import           Data.Maybe (isJust)
-import           Data.Word (Word8)
+import           Data.Word8
 
 import           Control.Arrow (second)
 
@@ -73,7 +71,7 @@ import           Control.Arrow (second)
 
 -- | Path separator character
 pathSeparator :: Word8
-pathSeparator = fromIntegral $ ord '/'
+pathSeparator = _slash
 
 -- | Check if a character is the path separator
 --
@@ -83,7 +81,7 @@ isPathSeparator = (== pathSeparator)
 
 -- | Search path separator
 searchPathSeparator :: Word8
-searchPathSeparator = fromIntegral $ ord ':'
+searchPathSeparator = _colon
 
 -- | Check if a character is the search path separator
 --
@@ -93,7 +91,7 @@ isSearchPathSeparator = (== searchPathSeparator)
 
 -- | File extension separator
 extSeparator :: Word8
-extSeparator = fromIntegral $ ord '.'
+extSeparator = _period
 
 -- | Check if a character is the file extension separator
 --
@@ -235,10 +233,12 @@ takeExtensions = snd . splitExtensions
 -- prop> \path -> uncurry combine (splitFileName path) == path || fst (splitFileName path) == "./"
 splitFileName :: RawFilePath -> (RawFilePath, RawFilePath)
 splitFileName x = if BS.null path
-    then ("./", file)
+    then (dotSlash, file)
     else (path,file)
   where
     (path,file) = splitFileNameRaw x
+    dotSlash = _period `BS.cons` (BS.singleton pathSeparator)
+
 
 -- | Get the file name
 --
@@ -303,7 +303,7 @@ replaceBaseName path name = combineRaw dir (name <.> ext)
 -- "/path"
 takeDirectory :: RawFilePath -> RawFilePath
 takeDirectory x = case () of
-    () | x == "/" -> x
+    () | x == BS.singleton pathSeparator -> x
        | BS.null res && not (BS.null file) -> file
        | otherwise -> res
   where
@@ -387,7 +387,7 @@ joinPath = foldr (</>) BS.empty
 hasTrailingPathSeparator :: RawFilePath -> Bool
 hasTrailingPathSeparator x
     | BS.null x = False
-    | x == "/"  = False
+    | x == BS.singleton pathSeparator  = False
     | otherwise = isPathSeparator $ BS.last x
 
 -- | Add a trailing path separator.
@@ -462,9 +462,11 @@ _equalFilePath a b = norm a == norm b
         | BS.length path >= 2 && isPathSeparator (BS.last path) = BS.init path
         | otherwise = path
     dropInitialDot path
-        | BS.length path >= 2 && BS.take 2 path == "./" = BS.drop 2 path
+        | BS.length path >= 2 && BS.take 2 path == dotSlash = BS.drop 2 path
         | otherwise = path
     dropDups = joinPath . map f . splitPath
     f component
-        | BS.isSuffixOf "//" component = BS.init component
+        | BS.isSuffixOf dblSlsh component = BS.init component
         | otherwise = component
+    dblSlsh = pathSeparator `BS.cons` (BS.singleton pathSeparator)
+    dotSlash = _period `BS.cons` (BS.singleton pathSeparator)
