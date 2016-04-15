@@ -1,7 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -Wall #-}
 
@@ -40,6 +37,7 @@ module System.Posix.FilePath (
 , (</>)
 , splitPath
 , joinPath
+, normalise
 , splitDirectories
 
 , hasTrailingPathSeparator
@@ -48,6 +46,8 @@ module System.Posix.FilePath (
 
 , isRelative
 , isAbsolute
+, isValid
+, equalFilePath
 
 , module System.Posix.ByteString.FilePath
 ) where
@@ -56,9 +56,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           System.Posix.ByteString.FilePath
 
-import           Data.Char  (ord)
 import           Data.Maybe (isJust)
-import           Data.Word (Word8)
+import           Data.Word8
 
 import           Control.Arrow (second)
 
@@ -75,7 +74,7 @@ import           Control.Arrow (second)
 
 -- | Path separator character
 pathSeparator :: Word8
-pathSeparator = fromIntegral $ ord '/'
+pathSeparator = _slash
 
 -- | Check if a character is the path separator
 --
@@ -85,7 +84,7 @@ isPathSeparator = (== pathSeparator)
 
 -- | Search path separator
 searchPathSeparator :: Word8
-searchPathSeparator = fromIntegral $ ord ':'
+searchPathSeparator = _colon
 
 -- | Check if a character is the search path separator
 --
@@ -95,7 +94,7 @@ isSearchPathSeparator = (== searchPathSeparator)
 
 -- | File extension separator
 extSeparator :: Word8
-extSeparator = fromIntegral $ ord '.'
+extSeparator = _period
 
 -- | Check if a character is the file extension separator
 --
@@ -237,10 +236,12 @@ takeExtensions = snd . splitExtensions
 -- prop> \path -> uncurry combine (splitFileName path) == path || fst (splitFileName path) == "./"
 splitFileName :: RawFilePath -> (RawFilePath, RawFilePath)
 splitFileName x = if BS.null path
-    then ("./", file)
+    then (dotSlash, file)
     else (path,file)
   where
     (path,file) = splitFileNameRaw x
+    dotSlash = _period `BS.cons` (BS.singleton pathSeparator)
+
 
 -- | Get the file name
 --
@@ -305,7 +306,7 @@ replaceBaseName path name = combineRaw dir (name <.> ext)
 -- "/path"
 takeDirectory :: RawFilePath -> RawFilePath
 takeDirectory x = case () of
-    () | x == "/" -> x
+    () | x == BS.singleton pathSeparator -> x
        | BS.null res && not (BS.null file) -> file
        | otherwise -> res
   where
@@ -314,7 +315,7 @@ takeDirectory x = case () of
 
 -- | Change the directory component of a 'RawFilePath'
 --
--- prop> \path -> replaceDirectory path (takeDirectory path) `_equalFilePath` path || takeDirectory path == "."
+-- prop> \path -> replaceDirectory path (takeDirectory path) `equalFilePath` path || takeDirectory path == "."
 replaceDirectory :: RawFilePath -> ByteString -> RawFilePath
 replaceDirectory file dir = combineRaw dir (takeFileName file)
 
@@ -376,6 +377,63 @@ joinPath :: [RawFilePath] -> RawFilePath
 joinPath = foldr (</>) BS.empty
 
 
+-- |Normalise a file.
+--
+-- >>> normalise "/file/\\test////"
+-- "/file/\\test/"
+-- >>> normalise "/file/./test"
+-- "/file/test"
+-- >>> normalise "/test/file/../bob/fred/"
+-- "/test/file/../bob/fred/"
+-- >>> normalise "../bob/fred/"
+-- "../bob/fred/"
+-- >>> normalise "./bob/fred/"
+-- "bob/fred/"
+-- >>> normalise "./bob////.fred/./...///./..///#."
+-- "bob/.fred/.../../#."
+-- >>> normalise "."
+-- "."
+-- >>> normalise "./"
+-- "./"
+-- >>> normalise "./."
+-- "./"
+-- >>> normalise "/./"
+-- "/"
+-- >>> normalise "/"
+-- "/"
+-- >>> normalise "bob/fred/."
+-- "bob/fred/"
+-- >>> normalise "//home"
+-- "/home"
+normalise :: RawFilePath -> RawFilePath
+normalise filepath =
+  result `BS.append`
+  (if addPathSeparator
+       then BS.singleton pathSeparator
+       else BS.empty)
+  where
+    result = let n = f filepath
+             in if BS.null n
+                then BS.singleton _period
+                else n
+    addPathSeparator = isDirPath filepath &&
+      not (hasTrailingPathSeparator' result)
+    isDirPath xs = hasTrailingPathSeparator' xs
+        || not (BS.null xs) && BS.last xs == _period
+           && hasTrailingPathSeparator' (BS.init xs)
+    f = joinPath . dropDots . propSep . splitDirectories
+    propSep :: [ByteString] -> [ByteString]
+    propSep (x:xs)
+      | BS.all (== pathSeparator) x = BS.singleton pathSeparator : xs
+      | otherwise                   = x : xs
+    propSep [] = []
+    dropDots :: [ByteString] -> [ByteString]
+    dropDots = filter (BS.singleton _period /=)
+    hasTrailingPathSeparator' :: RawFilePath -> Bool
+    hasTrailingPathSeparator' x
+        | BS.null x = False
+        | otherwise = isPathSeparator $ BS.last x
+
 ------------------------
 -- trailing path separators
 
@@ -389,7 +447,7 @@ joinPath = foldr (</>) BS.empty
 hasTrailingPathSeparator :: RawFilePath -> Bool
 hasTrailingPathSeparator x
     | BS.null x = False
-    | x == "/"  = False
+    | x == BS.singleton pathSeparator  = False
     | otherwise = isPathSeparator $ BS.last x
 
 -- | Add a trailing path separator.
@@ -438,6 +496,42 @@ isAbsolute x
 isRelative :: RawFilePath -> Bool
 isRelative = not . isAbsolute
 
+-- | Is a FilePath valid, i.e. could you create a file like it?
+--
+-- >>> isValid ""
+-- False
+-- >>> isValid "\0"
+-- False
+-- >>> isValid "/random_ path:*"
+-- True
+isValid :: RawFilePath -> Bool
+isValid filepath
+  | BS.null filepath        = False
+  | _nul `BS.elem` filepath = False
+  | otherwise               = True
+
+-- |Equality of two filepaths. The filepaths are normalised
+-- and trailing path separators are dropped.
+--
+-- >>> equalFilePath "foo" "foo"
+-- True
+-- >>> equalFilePath "foo" "foo/"
+-- True
+-- >>> equalFilePath "foo" "./foo"
+-- True
+-- >>> equalFilePath "foo" "/foo"
+-- False
+-- >>> equalFilePath "foo" "FOO"
+-- False
+-- >>> equalFilePath "foo" "../foo"
+-- False
+--
+-- prop> \p -> equalFilePath p p
+equalFilePath :: RawFilePath -> RawFilePath -> Bool
+equalFilePath p1 p2 = f p1 == f p2
+  where
+    f x = dropTrailingPathSeparator $ normalise x
+
 ------------------------
 -- internal stuff
 
@@ -453,20 +547,3 @@ combineRaw a b | BS.null a = b
                   | isPathSeparator (BS.last a) = BS.append a b
                   | otherwise = BS.intercalate (BS.singleton pathSeparator) [a, b]
 
--- | we don't even attempt to fully normalize file paths, this is just enough
--- equality to test some operations.
---
-_equalFilePath :: RawFilePath -> RawFilePath -> Bool
-_equalFilePath a b = norm a == norm b
-  where
-    norm = dropDups . dropTrailingSlash . dropInitialDot
-    dropTrailingSlash path
-        | BS.length path >= 2 && isPathSeparator (BS.last path) = BS.init path
-        | otherwise = path
-    dropInitialDot path
-        | BS.length path >= 2 && BS.take 2 path == "./" = BS.drop 2 path
-        | otherwise = path
-    dropDups = joinPath . map f . splitPath
-    f component
-        | BS.isSuffixOf "//" component = BS.init component
-        | otherwise = component
