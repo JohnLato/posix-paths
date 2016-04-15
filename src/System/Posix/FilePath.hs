@@ -37,6 +37,7 @@ module System.Posix.FilePath (
 , (</>)
 , splitPath
 , joinPath
+, normalise
 , splitDirectories
 
 , hasTrailingPathSeparator
@@ -374,6 +375,63 @@ splitDirectories x
 joinPath :: [RawFilePath] -> RawFilePath
 joinPath = foldr (</>) BS.empty
 
+
+-- |Normalise a file.
+--
+-- >>> normalise "/file/\\test////"
+-- "/file/\\test/"
+-- >>> normalise "/file/./test"
+-- "/file/test"
+-- >>> normalise "/test/file/../bob/fred/"
+-- "/test/file/../bob/fred/"
+-- >>> normalise "../bob/fred/"
+-- "../bob/fred/"
+-- >>> normalise "./bob/fred/"
+-- "bob/fred/"
+-- >>> normalise "./bob////.fred/./...///./..///#."
+-- "bob/.fred/.../../#."
+-- >>> normalise "."
+-- "."
+-- >>> normalise "./"
+-- "./"
+-- >>> normalise "./."
+-- "./"
+-- >>> normalise "/./"
+-- "/"
+-- >>> normalise "/"
+-- "/"
+-- >>> normalise "bob/fred/."
+-- "bob/fred/"
+-- >>> normalise "//home"
+-- "/home"
+normalise :: RawFilePath -> RawFilePath
+normalise filepath =
+  result `BS.append`
+  (if addPathSeparator
+       then BS.singleton pathSeparator
+       else BS.empty)
+  where
+    result = let n = f filepath
+             in if BS.null n
+                then BS.singleton _period
+                else n
+    addPathSeparator = isDirPath filepath &&
+      not (hasTrailingPathSeparator' result)
+    isDirPath xs = hasTrailingPathSeparator' xs
+        || not (BS.null xs) && BS.last xs == _period
+           && hasTrailingPathSeparator' (BS.init xs)
+    f = joinPath . dropDots . propSep . splitDirectories
+    propSep :: [ByteString] -> [ByteString]
+    propSep (x:xs)
+      | BS.all (== pathSeparator) x = BS.singleton pathSeparator : xs
+      | otherwise                   = x : xs
+    propSep [] = []
+    dropDots :: [ByteString] -> [ByteString]
+    dropDots = filter (BS.singleton _period /=)
+    hasTrailingPathSeparator' :: RawFilePath -> Bool
+    hasTrailingPathSeparator' x
+        | BS.null x = False
+        | otherwise = isPathSeparator $ BS.last x
 
 ------------------------
 -- trailing path separators
