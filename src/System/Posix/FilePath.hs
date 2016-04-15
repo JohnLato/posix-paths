@@ -47,6 +47,7 @@ module System.Posix.FilePath (
 , isRelative
 , isAbsolute
 , isValid
+, equalFilePath
 
 , module System.Posix.ByteString.FilePath
 ) where
@@ -314,7 +315,7 @@ takeDirectory x = case () of
 
 -- | Change the directory component of a 'RawFilePath'
 --
--- prop> \path -> replaceDirectory path (takeDirectory path) `_equalFilePath` path || takeDirectory path == "."
+-- prop> \path -> replaceDirectory path (takeDirectory path) `equalFilePath` path || takeDirectory path == "."
 replaceDirectory :: RawFilePath -> ByteString -> RawFilePath
 replaceDirectory file dir = combineRaw dir (takeFileName file)
 
@@ -509,6 +510,28 @@ isValid filepath
   | _nul `BS.elem` filepath = False
   | otherwise               = True
 
+-- |Equality of two filepaths. The filepaths are normalised
+-- and trailing path separators are dropped.
+--
+-- >>> equalFilePath "foo" "foo"
+-- True
+-- >>> equalFilePath "foo" "foo/"
+-- True
+-- >>> equalFilePath "foo" "./foo"
+-- True
+-- >>> equalFilePath "foo" "/foo"
+-- False
+-- >>> equalFilePath "foo" "FOO"
+-- False
+-- >>> equalFilePath "foo" "../foo"
+-- False
+--
+-- prop> \p -> equalFilePath p p
+equalFilePath :: RawFilePath -> RawFilePath -> Bool
+equalFilePath p1 p2 = f p1 == f p2
+  where
+    f x = dropTrailingPathSeparator $ normalise x
+
 ------------------------
 -- internal stuff
 
@@ -524,22 +547,3 @@ combineRaw a b | BS.null a = b
                   | isPathSeparator (BS.last a) = BS.append a b
                   | otherwise = BS.intercalate (BS.singleton pathSeparator) [a, b]
 
--- | we don't even attempt to fully normalize file paths, this is just enough
--- equality to test some operations.
---
-_equalFilePath :: RawFilePath -> RawFilePath -> Bool
-_equalFilePath a b = norm a == norm b
-  where
-    norm = dropDups . dropTrailingSlash . dropInitialDot
-    dropTrailingSlash path
-        | BS.length path >= 2 && isPathSeparator (BS.last path) = BS.init path
-        | otherwise = path
-    dropInitialDot path
-        | BS.length path >= 2 && BS.take 2 path == dotSlash = BS.drop 2 path
-        | otherwise = path
-    dropDups = joinPath . map f . splitPath
-    f component
-        | BS.isSuffixOf dblSlsh component = BS.init component
-        | otherwise = component
-    dblSlsh = pathSeparator `BS.cons` (BS.singleton pathSeparator)
-    dotSlash = _period `BS.cons` (BS.singleton pathSeparator)
