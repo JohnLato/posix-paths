@@ -45,6 +45,7 @@ module System.Posix.FilePath (
 
 , isRelative
 , isAbsolute
+, isValid
 
 , module System.Posix.ByteString.FilePath
 ) where
@@ -435,6 +436,20 @@ isAbsolute x
 -- prop> \path -> isRelative path /= isAbsolute path
 isRelative :: RawFilePath -> Bool
 isRelative = not . isAbsolute
+
+-- | Is a FilePath valid, i.e. could you create a file like it?
+--
+-- >>> isValid ""
+-- False
+-- >>> isValid "\0"
+-- False
+-- >>> isValid "/random_ path:*"
+-- True
+isValid :: RawFilePath -> Bool
+isValid filepath
+  | BS.null filepath        = False
+  | _nul `BS.elem` filepath = False
+  | otherwise               = True
 
 ------------------------
 -- internal stuff
