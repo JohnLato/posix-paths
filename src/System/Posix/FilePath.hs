@@ -59,6 +59,7 @@ module System.Posix.FilePath (
 , isFileName
 , hasParentDir
 , equalFilePath
+, hiddenFile
 
 , module System.Posix.ByteString.FilePath
 ) where
@@ -578,6 +579,34 @@ equalFilePath :: RawFilePath -> RawFilePath -> Bool
 equalFilePath p1 p2 = f p1 == f p2
   where
     f x = dropTrailingPathSeparator $ normalise x
+
+
+-- | Whether the file is a hidden file.
+--
+-- >>> hiddenFile ".foo"
+-- True
+-- >>> hiddenFile "..foo.bar"
+-- True
+-- >>> hiddenFile "some/path/.bar"
+-- True
+-- >>> hiddenFile "..."
+-- True
+-- >>> hiddenFile "dod.bar"
+-- False
+-- >>> hiddenFile "."
+-- False
+-- >>> hiddenFile ".."
+-- False
+-- >>> hiddenFile ""
+-- False
+hiddenFile :: RawFilePath -> Bool
+hiddenFile fp
+  | fn == BS.pack [_period, _period] = False
+  | fn == BS.pack [_period]          = False
+  | otherwise                        = BS.pack [extSeparator]
+                                         `BS.isPrefixOf` fn
+  where
+    fn = takeFileName fp
 
 ------------------------
 -- internal stuff
