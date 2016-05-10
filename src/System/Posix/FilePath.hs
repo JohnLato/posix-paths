@@ -417,10 +417,10 @@ normalise filepath =
                 then BS.singleton _period
                 else n
     addPathSeparator = isDirPath filepath &&
-      not (hasTrailingPathSeparator' result)
-    isDirPath xs = hasTrailingPathSeparator' xs
+      not (hasTrailingPathSeparator result)
+    isDirPath xs = hasTrailingPathSeparator xs
         || not (BS.null xs) && BS.last xs == _period
-           && hasTrailingPathSeparator' (BS.init xs)
+           && hasTrailingPathSeparator (BS.init xs)
     f = joinPath . dropDots . propSep . splitDirectories
     propSep :: [ByteString] -> [ByteString]
     propSep (x:xs)
@@ -429,26 +429,22 @@ normalise filepath =
     propSep [] = []
     dropDots :: [ByteString] -> [ByteString]
     dropDots = filter (BS.singleton _period /=)
-    hasTrailingPathSeparator' :: RawFilePath -> Bool
-    hasTrailingPathSeparator' x
-        | BS.null x = False
-        | otherwise = isPathSeparator $ BS.last x
 
 ------------------------
 -- trailing path separators
 
--- | Check if the last character of a 'RawFilePath' is '/', unless it's the
--- root.
+-- | Check if the last character of a 'RawFilePath' is '/'.
 --
 -- >>> hasTrailingPathSeparator "/path/"
 -- True
 -- >>> hasTrailingPathSeparator "/"
+-- True
+-- >>> hasTrailingPathSeparator "/path"
 -- False
 hasTrailingPathSeparator :: RawFilePath -> Bool
 hasTrailingPathSeparator x
-    | BS.null x = False
-    | x == BS.singleton pathSeparator  = False
-    | otherwise = isPathSeparator $ BS.last x
+  | BS.null x = False
+  | otherwise = isPathSeparator $ BS.last x
 
 -- | Add a trailing path separator.
 --
@@ -457,6 +453,8 @@ hasTrailingPathSeparator x
 --
 -- >>> addTrailingPathSeparator "/path/"
 -- "/path/"
+-- >>> addTrailingPathSeparator "/"
+-- "/"
 addTrailingPathSeparator :: RawFilePath -> RawFilePath
 addTrailingPathSeparator x = if hasTrailingPathSeparator x
     then x
@@ -466,13 +464,19 @@ addTrailingPathSeparator x = if hasTrailingPathSeparator x
 --
 -- >>> dropTrailingPathSeparator "/path/"
 -- "/path"
+-- >>> dropTrailingPathSeparator "/path////"
+-- "/path"
 --
 -- >>> dropTrailingPathSeparator "/"
 -- "/"
+-- >>> dropTrailingPathSeparator "//"
+-- "/"
 dropTrailingPathSeparator :: RawFilePath -> RawFilePath
-dropTrailingPathSeparator x = if hasTrailingPathSeparator x
-    then BS.init x
-    else x
+dropTrailingPathSeparator x
+  | x == BS.singleton pathSeparator = x
+  | otherwise = if hasTrailingPathSeparator x
+                  then dropTrailingPathSeparator $ BS.init x
+                  else x
 
 ------------------------
 -- Filename/system stuff
