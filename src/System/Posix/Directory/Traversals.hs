@@ -49,6 +49,8 @@ import Foreign.Storable
 -- Upon entering a directory, 'allDirectoryContents' will get all entries
 -- strictly.  However the returned list is lazy in that directories will only
 -- be accessed on demand.
+--
+-- Follows symbolic links for the input dir.
 allDirectoryContents :: RawFilePath -> IO [RawFilePath]
 allDirectoryContents topdir = do
     namesAndTypes <- getDirectoryContents topdir
@@ -66,6 +68,8 @@ allDirectoryContents topdir = do
     return (topdir : concat paths)
 
 -- | Get all files from a directory and its subdirectories strictly.
+--
+-- Follows symbolic links for the input dir.
 allDirectoryContents' :: RawFilePath -> IO [RawFilePath]
 allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:acc)) []
 -- this uses traverseDirectory because it's more efficient than forcing the
@@ -75,6 +79,8 @@ allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:
 -- files/subdirectories.
 --
 -- This function allows for memory-efficient traversals.
+--
+-- Follows symbolic links for the input dir.
 traverseDirectory :: (s -> RawFilePath -> IO s) -> s -> RawFilePath -> IO s
 traverseDirectory act s0 topdir = toploop
   where
@@ -176,6 +182,7 @@ readDirEnt (unpackDirStream -> dirp) =
                     then return (dtUnknown,BS.empty)
                     else throwErrno "readDirEnt"
 
+-- |Gets all directory contents (not recursively).
 getDirectoryContents :: RawFilePath -> IO [(DirType, RawFilePath)]
 getDirectoryContents path =
   modifyIOError ((`ioeSetFileName` (BS.unpack path)) .
@@ -193,7 +200,7 @@ getDirectoryContents path =
 
 -- | return the canonicalized absolute pathname
 --
--- like canonicalizePath, but uses realpath(3)
+-- like canonicalizePath, but uses @realpath(3)@
 realpath :: RawFilePath -> IO RawFilePath
 realpath inp = do
     allocaBytes pathMax $ \tmp -> do
