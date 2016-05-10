@@ -110,17 +110,17 @@ actOnDirContents :: RawFilePath
                  -> IO b
 actOnDirContents pathRelToTop b f =
   modifyIOError ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
-                 (`ioeSetLocation` "findBSTypRel")) $ do
+                 (`ioeSetLocation` "findBSTypRel")) $
     bracket
       (openDirStream pathRelToTop)
-      (Posix.closeDirStream)
+      Posix.closeDirStream
       (\dirp -> loop dirp b)
  where
   loop dirp b' = do
     (typ,e) <- readDirEnt dirp
     if (e == "")
       then return b'
-      else do
+      else
           if (e == "." || e == "..")
               then loop dirp b'
               else f typ (pathRelToTop </> e) b' >>= loop dirp
@@ -197,7 +197,7 @@ readDirEnt (unpackDirStream -> dirp) =
 getDirectoryContents :: RawFilePath -> IO [(DirType, RawFilePath)]
 getDirectoryContents path =
   modifyIOError ((`ioeSetFileName` (BS.unpack path)) .
-                 (`ioeSetLocation` "System.Posix.Directory.Traversals.getDirectoryContents")) $ do
+                 (`ioeSetLocation` "System.Posix.Directory.Traversals.getDirectoryContents")) $
     bracket
       (PosixBS.openDirStream path)
       PosixBS.closeDirStream
@@ -239,7 +239,7 @@ _dirloop dirp = do
 --
 -- like canonicalizePath, but uses @realpath(3)@
 realpath :: RawFilePath -> IO RawFilePath
-realpath inp = do
+realpath inp =
     allocaBytes pathMax $ \tmp -> do
         void $ BS.useAsCString inp $ \cstr -> throwErrnoIfNull "realpath" $ c_realpath cstr tmp
         BS.packCString tmp
