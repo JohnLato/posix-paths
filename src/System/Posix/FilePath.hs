@@ -56,6 +56,7 @@ module System.Posix.FilePath (
 , isRelative
 , isAbsolute
 , isValid
+, isFileName
 , equalFilePath
 
 , module System.Posix.ByteString.FilePath
@@ -502,6 +503,27 @@ isValid filepath
   | BS.null filepath        = False
   | _nul `BS.elem` filepath = False
   | otherwise               = True
+
+-- | Is the given path a valid filename? This includes
+-- "." and "..".
+--
+-- >>> isFileName "lal"
+-- True
+-- >>> isFileName "."
+-- True
+-- >>> isFileName ".."
+-- True
+-- >>> isFileName ""
+-- False
+-- >>> isFileName "\0"
+-- False
+-- >>> isFileName "/random_ path:*"
+-- False
+isFileName :: RawFilePath -> Bool
+isFileName filepath =
+  not (BS.singleton pathSeparator `BS.isInfixOf` filepath) &&
+  not (BS.null filepath) &&
+  not (_nul `BS.elem` filepath)
 
 -- |Equality of two filepaths. The filepaths are normalised
 -- and trailing path separators are dropped.
