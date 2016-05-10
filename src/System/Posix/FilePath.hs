@@ -7,6 +7,7 @@
 -- Not all functions of "System.FilePath" are implemented yet. Feel free to contribute!
 module System.Posix.FilePath (
 
+  -- * Separators
   pathSeparator
 , isPathSeparator
 , searchPathSeparator
@@ -14,6 +15,7 @@ module System.Posix.FilePath (
 , extSeparator
 , isExtSeparator
 
+  -- * File extensions
 , splitExtension
 , takeExtension
 , replaceExtension
@@ -25,6 +27,7 @@ module System.Posix.FilePath (
 , dropExtensions
 , takeExtensions
 
+  -- * Filenames/Directory names
 , splitFileName
 , takeFileName
 , replaceFileName
@@ -33,17 +36,23 @@ module System.Posix.FilePath (
 , replaceBaseName
 , takeDirectory
 , replaceDirectory
+
+  -- * Path combinators and splitters
 , combine
 , (</>)
 , splitPath
 , joinPath
-, normalise
 , splitDirectories
 
+  -- * Path conversions
+, normalise
+
+  -- * Trailing path separator
 , hasTrailingPathSeparator
 , addTrailingPathSeparator
 , dropTrailingPathSeparator
 
+  -- * Queries
 , isRelative
 , isAbsolute
 , isValid
@@ -109,10 +118,8 @@ isExtSeparator = (== extSeparator)
 --
 -- >>> splitExtension "file.exe"
 -- ("file",".exe")
---
 -- >>> splitExtension "file"
 -- ("file","")
---
 -- >>> splitExtension "/path/file.tar.gz"
 -- ("/path/file.tar",".gz")
 --
@@ -129,10 +136,8 @@ splitExtension x = if BS.null basename
 --
 -- >>> takeExtension "file.exe"
 -- ".exe"
---
 -- >>> takeExtension "file"
 -- ""
---
 -- >>> takeExtension "/path/file.tar.gz"
 -- ".gz"
 takeExtension :: RawFilePath -> ByteString
@@ -148,10 +153,8 @@ replaceExtension path ext = dropExtension path <.> ext
 --
 -- >>> dropExtension "file.exe"
 -- "file"
---
 -- >>> dropExtension "file"
 -- "file"
---
 -- >>> dropExtension "/path/file.tar.gz"
 -- "/path/file.tar"
 dropExtension :: RawFilePath -> RawFilePath
@@ -161,10 +164,8 @@ dropExtension = fst . splitExtension
 --
 -- >>> addExtension "file" ".exe"
 -- "file.exe"
---
 -- >>> addExtension "file.tar" ".gz"
 -- "file.tar.gz"
---
 -- >>> addExtension "/path/" ".ext"
 -- "/path/.ext"
 addExtension :: RawFilePath -> ByteString -> RawFilePath
@@ -182,10 +183,8 @@ addExtension file ext
 --
 -- >>> hasExtension "file"
 -- False
---
 -- >>> hasExtension "file.tar"
 -- True
---
 -- >>> hasExtension "/path.part1/"
 -- False
 hasExtension :: RawFilePath -> Bool
@@ -226,10 +225,8 @@ takeExtensions = snd . splitExtensions
 --
 -- >>> splitFileName "path/file.txt"
 -- ("path/","file.txt")
---
 -- >>> splitFileName "path/"
 -- ("path/","")
---
 -- >>> splitFileName "file.txt"
 -- ("./","file.txt")
 --
@@ -247,7 +244,6 @@ splitFileName x = if BS.null path
 --
 -- >>> takeFileName "path/file.txt"
 -- "file.txt"
---
 -- >>> takeFileName "path/"
 -- ""
 takeFileName :: RawFilePath -> RawFilePath
@@ -263,7 +259,6 @@ replaceFileName x y = fst (splitFileNameRaw x) </> y
 --
 -- >>> dropFileName "path/file.txt"
 -- "path/"
---
 -- >>> dropFileName "file.txt"
 -- "./"
 dropFileName :: RawFilePath -> RawFilePath
@@ -273,7 +268,6 @@ dropFileName = fst . splitFileName
 --
 -- >>> takeBaseName "path/file.tar.gz"
 -- "file.tar"
---
 -- >>> takeBaseName ""
 -- ""
 takeBaseName :: RawFilePath -> ByteString
@@ -295,13 +289,10 @@ replaceBaseName path name = combineRaw dir (name <.> ext)
 --
 -- >>> takeDirectory "path/file.txt"
 -- "path"
---
 -- >>> takeDirectory "file"
 -- "."
---
 -- >>> takeDirectory "/path/to/"
 -- "/path/to"
---
 -- >>> takeDirectory "/path/to"
 -- "/path"
 takeDirectory :: RawFilePath -> RawFilePath
@@ -450,7 +441,6 @@ hasTrailingPathSeparator x
 --
 -- >>> addTrailingPathSeparator "/path"
 -- "/path/"
---
 -- >>> addTrailingPathSeparator "/path/"
 -- "/path/"
 -- >>> addTrailingPathSeparator "/"
@@ -466,7 +456,6 @@ addTrailingPathSeparator x = if hasTrailingPathSeparator x
 -- "/path"
 -- >>> dropTrailingPathSeparator "/path////"
 -- "/path"
---
 -- >>> dropTrailingPathSeparator "/"
 -- "/"
 -- >>> dropTrailingPathSeparator "//"
