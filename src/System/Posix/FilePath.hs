@@ -57,6 +57,7 @@ module System.Posix.FilePath (
 , isAbsolute
 , isValid
 , isFileName
+, hasParentDir
 , equalFilePath
 
 , module System.Posix.ByteString.FilePath
@@ -524,6 +525,37 @@ isFileName filepath =
   not (BS.singleton pathSeparator `BS.isInfixOf` filepath) &&
   not (BS.null filepath) &&
   not (_nul `BS.elem` filepath)
+
+-- | Check if the filepath has any parent directories in it.
+--
+-- >>> hasParentDir "/.."
+-- True
+-- >>> hasParentDir "foo/bar/.."
+-- True
+-- >>> hasParentDir "foo/../bar/."
+-- True
+-- >>> hasParentDir "foo/bar"
+-- False
+-- >>> hasParentDir "foo"
+-- False
+-- >>> hasParentDir ""
+-- False
+-- >>> hasParentDir ".."
+-- False
+hasParentDir :: RawFilePath -> Bool
+hasParentDir filepath =
+    (pathSeparator `BS.cons` pathDoubleDot)
+     `BS.isSuffixOf` filepath
+   ||
+    (BS.singleton pathSeparator
+        `BS.append` pathDoubleDot
+        `BS.append` BS.singleton pathSeparator)
+     `BS.isInfixOf`  filepath
+   ||
+    (pathDoubleDot `BS.append` BS.singleton pathSeparator)
+      `BS.isPrefixOf` filepath
+  where
+    pathDoubleDot = BS.pack [_period, _period]
 
 -- |Equality of two filepaths. The filepaths are normalised
 -- and trailing path separators are dropped.
