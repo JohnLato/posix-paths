@@ -32,7 +32,7 @@ Library
 test-suite doctests
     default-language:   Haskell2010
     type:               exitcode-stdio-1.0
-    ghc-options:        -threaded
+    ghc-options:        -Wall -threaded
     main-is:            doctests.hs
     build-depends:      base,
                         bytestring,
@@ -57,7 +57,7 @@ benchmark bench.hs
       filepath   >= 1.2,
       process    >= 1.0,
       criterion  >= 0.6
-  ghc-options: -O2
+  ghc-options: -Wall -O2
 
 source-repository head
   type:                git
