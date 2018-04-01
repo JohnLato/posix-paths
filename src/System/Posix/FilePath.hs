@@ -459,7 +459,9 @@ combineRaw a b | BS.null a = b
 _equalFilePath :: RawFilePath -> RawFilePath -> Bool
 _equalFilePath a b = norm a == norm b
   where
-    norm = dropDups . dropTrailingSlash . dropInitialDot
+    -- Drop trailing slash *after* we've dropped duplicate slashes,
+    -- otherwise there might be trailing slashes left.
+    norm = dropTrailingSlash . dropDups . dropInitialDot
     dropTrailingSlash path
         | BS.length path >= 2 && isPathSeparator (BS.last path) = BS.init path
         | otherwise = path
@@ -468,5 +470,5 @@ _equalFilePath a b = norm a == norm b
         | otherwise = path
     dropDups = joinPath . map f . splitPath
     f component
-        | BS.isSuffixOf "//" component = BS.init component
+        | BS.isSuffixOf "//" component = f (BS.init component) -- there might be more slashes
         | otherwise = component
