@@ -1,16 +1,16 @@
-name:		posix-paths
-version:  0.2.1.3
-license:	BSD3
-license-file:	LICENSE
-maintainer:	jwlato@gmail.com
+name:  posix-paths
+version:  0.2.1.4
+license: BSD3
+license-file: LICENSE
+maintainer: jwlato@gmail.com
 bug-reports: http://github.com/JohnLato/posix-paths/issues
-synopsis:	POSIX filepath/directory functionality
-category:       System
+synopsis: POSIX filepath/directory functionality
+category: System
 description:
-	This package gives access to certain POSIX-based Filepath/Directory
+  This package gives access to certain POSIX-based Filepath/Directory
   services.
-	.
-	The package is not supported under Windows (except under Cygwin).
+  .
+  The package is not supported under Windows (except under Cygwin).
 extra-source-files: cbits/dirutils.h
                     doctests.hs
                     benchmarks/*.hs
