@@ -73,17 +73,22 @@ allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:
 -- this uses traverseDirectory because it's more efficient than forcing the
 -- lazy version.
 
--- | Recursively apply the 'action' to the parent directory and all
+-- | Recursively apply the 'action' to the parent file or directory and all
 -- files/subdirectories.
+--
+-- Like UNIX @find@, this includes the parent file/directory!
+--
+-- As for @find@, emitted file paths of subdirectories contain slashes,
+-- starting with the parent directory.
 --
 -- This function allows for memory-efficient traversals.
 traverseDirectory :: (MonadUnliftIO m) => (s -> RawFilePath -> m s) -> s -> RawFilePath -> m s
-traverseDirectory act s0 topdir = toploop
+traverseDirectory act s0 topDirOrFile = toploop
   where
     toploop = do
-        isDir <- liftIO $ isDirectory <$> getFileStatus topdir
-        s' <- act s0 topdir
-        if isDir then actOnDirContents topdir s' loop
+        isDir <- liftIO $ isDirectory <$> getFileStatus topDirOrFile
+        s' <- act s0 topDirOrFile
+        if isDir then actOnDirContents topDirOrFile s' loop
                  else return s'
     loop typ path acc = do
         isDir <- liftIO $ case () of
