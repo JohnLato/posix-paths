@@ -98,7 +98,7 @@ actOnDirContents :: RawFilePath
                  -> IO b
 actOnDirContents pathRelToTop b f =
   modifyIOError ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
-                 (`ioeSetLocation` "findBSTypRel")) $ do
+                 (`ioeSetLocation` "System.Posix.Directory.actOnDirContents")) $ do
     bracket
       (openDirStream pathRelToTop)
       (Posix.closeDirStream)
