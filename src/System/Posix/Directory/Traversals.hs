@@ -140,7 +140,13 @@ packDirStream = unsafeCoerce
 
 -- the __hscore_* functions are defined in the unix package.  We can import them and let
 -- the linker figure it out.
-foreign import ccall unsafe "__hscore_readdir"
+--
+-- In contrast to current `unix` we use `safe` calls for anything that
+-- does file system IO, because it can take a substantial amount of time
+-- on spinning disks or networked file systems, and `unsafe` calls block
+-- a capability.
+-- See https://github.com/haskell/unix/issues/34.
+foreign import ccall safe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt
 
 foreign import ccall unsafe "__hscore_free_dirent"
