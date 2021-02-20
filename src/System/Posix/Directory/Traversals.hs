@@ -7,6 +7,7 @@
 module System.Posix.Directory.Traversals (
 
   getDirectoryContents
+, traverseDirectoryContents
 
 , allDirectoryContents
 , allDirectoryContents'
@@ -105,22 +106,10 @@ actOnDirContents :: (MonadUnliftIO m)
                  -> (DirType -> RawFilePath -> b -> m b)
                  -> m b
 actOnDirContents pathRelToTop b f =
-  modifyIOErrorUnliftIO
-    ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
-     (`ioeSetLocation` "System.Posix.Directory.actOnDirContents")) $ do
-    bracket
-      (liftIO $ openDirStream pathRelToTop)
-      (liftIO . Posix.closeDirStream)
-      (\dirp -> loop dirp b)
- where
-  loop dirp b' = do
-    (typ,e) <- liftIO $ readDirEnt dirp
-    if (e == "")
-      then return b'
-      else do
-          if (e == "." || e == "..")
-              then loop dirp b'
-              else f typ (pathRelToTop </> e) b' >>= loop dirp
+  traverseDirectoryContents
+    (\b' (typ, e) -> f typ (pathRelToTop </> e) b')
+    b
+    pathRelToTop
 
 -- | `withRunInIO` lifted to `MonadUnliftIO`.
 modifyIOErrorUnliftIO :: (MonadUnliftIO m) => (IOError -> IOError) -> m a -> m a
@@ -196,20 +185,47 @@ readDirEnt (unpackDirStream -> dirp) =
                     then return (dtUnknown,BS.empty)
                     else throwErrno "readDirEnt"
 
+-- | Apply the 'action' to the given directory (must be a directory),
+-- without recursing into subdirectories.
+--
+-- This function does filter out the @.@ and @..@ entries.
+--
+-- Emitted file paths are the directory entry names,
+-- thus not prefixed with the given parent directory.
+--
+-- This function allows for memory-efficient traversals.
+--
+-- Use this if you want to implement your own recursive subdirectory
+-- traversal, deciding e.g. into which directories or symlinks to traverse.
+--
+-- You SHOULD check if the obtained 'DirType'
+-- is 'System.Posix.Directory.Foreign.dtUnknown'
+-- (see comments in @man 3 readdir@ on @d_type@),
+-- and do a 'System.Posix.Files.ByteString.getFileStatus'
+-- in that case (results in @stat()@), as not all file systems
+-- implement obtaining a 'DirType'.
+traverseDirectoryContents :: (MonadUnliftIO m) => (s -> (DirType, RawFilePath) -> m s) -> s -> RawFilePath -> m s
+traverseDirectoryContents act state path =
+  modifyIOErrorUnliftIO
+    ((`ioeSetFileName` (BS.unpack path)) .
+     (`ioeSetLocation` "System.Posix.Directory.Traversals.traverseDirectoryContents")) $ do
+    bracket
+      (liftIO $ PosixBS.openDirStream path)
+      (liftIO . PosixBS.closeDirStream)
+      (\dirp -> loop state dirp)
+  where
+   loop state0 dirp = do
+      t@(_typ,e) <- liftIO $ readDirEnt dirp
+      if BS.null e then return state0 else do
+        if (e == "." || e == "..")
+          then loop state0 dirp
+          else do
+            state1 <- act state0 t
+            loop state1 dirp
+
 getDirectoryContents :: RawFilePath -> IO [(DirType, RawFilePath)]
 getDirectoryContents path =
-  modifyIOError ((`ioeSetFileName` (BS.unpack path)) .
-                 (`ioeSetLocation` "System.Posix.Directory.Traversals.getDirectoryContents")) $ do
-    bracket
-      (PosixBS.openDirStream path)
-      PosixBS.closeDirStream
-      loop
- where
-  loop dirp = do
-     t@(_typ,e) <- readDirEnt dirp
-     if BS.null e then return [] else do
-       es <- loop dirp
-       return (t:es)
+  traverseDirectoryContents (\l e -> pure (e:l)) [] path
 
 -- | return the canonicalized absolute pathname
 --
