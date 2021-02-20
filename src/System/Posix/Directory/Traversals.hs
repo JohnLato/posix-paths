@@ -22,16 +22,18 @@ module System.Posix.Directory.Traversals (
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.IO.Class (liftIO)
 import System.Posix.FilePath ((</>))
 import System.Posix.Directory.Foreign
 
 import qualified System.Posix as Posix
 import System.IO.Error
-import Control.Exception
 import qualified Data.ByteString.Char8 as BS
 import System.Posix.ByteString.FilePath
 import System.Posix.Directory.ByteString as PosixBS
 import System.Posix.Files.ByteString
+import UnliftIO (MonadUnliftIO, withRunInIO)
+import UnliftIO.Exception
 
 import System.IO.Unsafe
 import Unsafe.Coerce (unsafeCoerce)
@@ -75,16 +77,16 @@ allDirectoryContents' = fmap reverse . traverseDirectory (\acc fp -> return (fp:
 -- files/subdirectories.
 --
 -- This function allows for memory-efficient traversals.
-traverseDirectory :: (s -> RawFilePath -> IO s) -> s -> RawFilePath -> IO s
+traverseDirectory :: (MonadUnliftIO m) => (s -> RawFilePath -> m s) -> s -> RawFilePath -> m s
 traverseDirectory act s0 topdir = toploop
   where
     toploop = do
-        isDir <- isDirectory <$> getFileStatus topdir
+        isDir <- liftIO $ isDirectory <$> getFileStatus topdir
         s' <- act s0 topdir
         if isDir then actOnDirContents topdir s' loop
                  else return s'
     loop typ path acc = do
-        isDir <- case () of
+        isDir <- liftIO $ case () of
             () | typ == dtDir     -> return True
                | typ == dtUnknown -> isDirectory <$> getFileStatus path
                | otherwise        -> return False
@@ -92,20 +94,22 @@ traverseDirectory act s0 topdir = toploop
           then act acc path >>= \acc' -> actOnDirContents path acc' loop
           else act acc path
 
-actOnDirContents :: RawFilePath
+actOnDirContents :: (MonadUnliftIO m)
+                 => RawFilePath
                  -> b
-                 -> (DirType -> RawFilePath -> b -> IO b)
-                 -> IO b
+                 -> (DirType -> RawFilePath -> b -> m b)
+                 -> m b
 actOnDirContents pathRelToTop b f =
-  modifyIOError ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
-                 (`ioeSetLocation` "System.Posix.Directory.actOnDirContents")) $ do
+  modifyIOErrorUnliftIO
+    ((`ioeSetFileName` (BS.unpack pathRelToTop)) .
+     (`ioeSetLocation` "System.Posix.Directory.actOnDirContents")) $ do
     bracket
-      (openDirStream pathRelToTop)
-      (Posix.closeDirStream)
+      (liftIO $ openDirStream pathRelToTop)
+      (liftIO . Posix.closeDirStream)
       (\dirp -> loop dirp b)
  where
   loop dirp b' = do
-    (typ,e) <- readDirEnt dirp
+    (typ,e) <- liftIO $ readDirEnt dirp
     if (e == "")
       then return b'
       else do
@@ -113,6 +117,11 @@ actOnDirContents pathRelToTop b f =
               then loop dirp b'
               else f typ (pathRelToTop </> e) b' >>= loop dirp
 
+-- | `withRunInIO` lifted to `MonadUnliftIO`.
+modifyIOErrorUnliftIO :: (MonadUnliftIO m) => (IOError -> IOError) -> m a -> m a
+modifyIOErrorUnliftIO f action =
+  withRunInIO $ \runInIO -> do
+    modifyIOError f (runInIO action)
 
 ----------------------------------------------------------
 -- dodgy stuff
