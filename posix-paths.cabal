@@ -1,5 +1,5 @@
 name:  posix-paths
-version:  0.2.1.6
+version:  0.3.0.0
 license: BSD3
 license-file: LICENSE
 maintainer: jwlato@gmail.com
