@@ -62,4 +62,4 @@ benchmark bench.hs
 
 source-repository head
   type:                git
-  location:            git://github.com/JohnLato/posix-paths.git
+  location:            https://github.com/JohnLato/posix-paths.git
