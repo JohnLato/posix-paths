@@ -37,13 +37,13 @@ import UnliftIO (MonadUnliftIO, withRunInIO)
 import UnliftIO.Exception
 
 import System.IO.Unsafe
-import Unsafe.Coerce (unsafeCoerce)
 import Foreign.C.Error
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Alloc (alloca,allocaBytes)
 import Foreign.Ptr
 import Foreign.Storable
+import System.Posix.Directory.Internals (DirStream(DirStream),CDir ,CDirent)
 
 ----------------------------------------------------------
 
@@ -118,19 +118,15 @@ modifyIOErrorUnliftIO f action =
     modifyIOError f (runInIO action)
 
 ----------------------------------------------------------
--- dodgy stuff
 
-type CDir = ()
-type CDirent = ()
 
--- Posix doesn't export DirStream, so to re-use that type we need to use
--- unsafeCoerce.  It's just a newtype, so this is a legitimate usage.
--- ugly trick.
+-- unpacks the DirStream
 unpackDirStream :: DirStream -> Ptr CDir
-unpackDirStream = unsafeCoerce
+unpackDirStream (DirStream p) = p
+
 
 packDirStream :: Ptr CDir -> DirStream
-packDirStream = unsafeCoerce
+packDirStream = DirStream
 
 -- the __hscore_* functions are defined in the unix package.  We can import them and let
 -- the linker figure it out.
