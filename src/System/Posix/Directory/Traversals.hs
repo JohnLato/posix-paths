@@ -37,7 +37,6 @@ import UnliftIO (MonadUnliftIO, withRunInIO)
 import UnliftIO.Exception
 
 import System.IO.Unsafe
-import Unsafe.Coerce (unsafeCoerce)
 import Foreign.C.Error
 import Foreign.C.String
 import Foreign.C.Types
