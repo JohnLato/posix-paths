@@ -1,3 +1,9 @@
+# 0.3.0.1
+
+* Fix: `getDirectoryContents` now returns entries in directory order, instead of in reverse directory order
+* Remove use of `unsafeCoerce` thanks to newly exported `unix` constructors
+* Remove use of `-O2`
+
 # 0.3.0.0
 
 * Use `foreign import ccall safe` for `readdir()` to avoid blocking
