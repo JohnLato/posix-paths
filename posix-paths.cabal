@@ -61,7 +61,7 @@ benchmark bench.hs
       filepath   >= 1.2,
       process    >= 1.0,
       criterion  >= 0.6
-  ghc-options: -Wall -O2
+  ghc-options: -Wall
 
 source-repository head
   type:                git
