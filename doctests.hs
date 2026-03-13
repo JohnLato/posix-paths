@@ -8,17 +8,20 @@ import System.Posix.Directory.Traversals
 import Test.DocTest
 import Test.HUnit
 
+main :: IO ()
 main = do
     doctest
       [ "-isrc"
       , "-XOverloadedStrings"
       , "src/System/Posix/FilePath"
       ]
-    runTestTT unitTests
+    _ <- runTestTT unitTests
+    pure ()
 
 unitTests :: Test
 unitTests = test
     [ TestCase $ do
-        r <- (==) <$> allDirectoryContents "." <*> allDirectoryContents' "."
-        assertBool "allDirectoryContents == allDirectoryContents'" r
+        a <- allDirectoryContents "."
+        b <- allDirectoryContents' "."
+        assertEqual "allDirectoryContents == allDirectoryContents'" a b
     ]

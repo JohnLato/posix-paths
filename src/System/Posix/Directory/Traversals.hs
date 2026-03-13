@@ -221,7 +221,7 @@ traverseDirectoryContents act state path =
 
 getDirectoryContents :: RawFilePath -> IO [(DirType, RawFilePath)]
 getDirectoryContents path =
-  traverseDirectoryContents (\l e -> pure (e:l)) [] path
+  fmap reverse $ traverseDirectoryContents (\l e -> pure (e:l)) [] path
 
 -- | return the canonicalized absolute pathname
 --
